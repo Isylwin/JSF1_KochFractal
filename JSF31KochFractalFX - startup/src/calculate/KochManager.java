@@ -25,31 +25,38 @@ public class KochManager implements Observer {
     }
 
     public void changeLevel(int nxt) {
-        koch.setLevel(nxt);
-        TimeStamp ts = new TimeStamp();
-        ts.setBegin("Start drawing fractals");
-        drawEdges();
-        ts.setEnd("End drawing fractals");
-        application.setTextCalc(ts.toString());
-        application.setTextNrEdges(edges.size() + "");
-    }
-
-    public void drawEdges() {
-        application.clearKochPanel();
         edges.clear();
+        koch.setLevel(nxt);
+
+        TimeStamp ts = new TimeStamp();
+        ts.setBegin("Start calculating edges");
 
         koch.generateLeftEdge();
         koch.generateBottomEdge();
         koch.generateRightEdge();
 
-        for(Edge randje : edges) {
-            application.drawEdge(randje);
-        }
+        ts.setEnd("End calculating edges");
+
+        application.setTextCalc(ts.toString());
+        application.setTextNrEdges(edges.size() + "");
+
+        drawEdges();
+    }
+
+    public void drawEdges() {
+        application.clearKochPanel();
+
+        TimeStamp ts = new TimeStamp();
+
+        ts.setBegin("Start drawing fractals");
+        edges.forEach(application::drawEdge);
+        ts.setEnd("End drawing fractals");
+
+        application.setTextDraw(ts.toString());
     }
 
     @Override
     public void update(Observable o, Object arg) {
         edges.add((Edge) arg);
-        //application.drawEdge((Edge) arg);
     }
 }
