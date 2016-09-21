@@ -3,10 +3,7 @@ package calculate;
 import jsf31kochfractalfx.JSF31KochFractalFX;
 import timeutil.TimeStamp;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Observable;
-import java.util.Observer;
+import java.util.*;
 
 /**
  * Created by Oscar on 21-Sep-16.
@@ -15,10 +12,11 @@ public class KochManager implements Observer {
 
     private JSF31KochFractalFX application;
     private KochFractal koch;
-    private List<Edge> edges = new ArrayList<>();
+    private List<Edge> edges;
 
     public KochManager(JSF31KochFractalFX application) {
         this.application = application;
+        edges = new ArrayList<>();
 
         koch = new KochFractal();
         koch.addObserver(this);
@@ -38,7 +36,7 @@ public class KochManager implements Observer {
         ts.setEnd("End calculating edges");
 
         application.setTextCalc(ts.toString());
-        application.setTextNrEdges(edges.size() + "");
+        application.setTextNrEdges(koch.getNrOfEdges() + "");
 
         drawEdges();
     }
