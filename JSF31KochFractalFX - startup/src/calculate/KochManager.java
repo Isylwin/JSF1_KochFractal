@@ -5,54 +5,56 @@ import jsf31kochfractalfx.JSF31KochFractalFX;
 import timeutil.TimeStamp;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Created by Oscar on 21-Sep-16.
  */
 public class KochManager {
-
     private JSF31KochFractalFX application;
-    private List<Edge> edges;
-    private int threadCount;
+    private List<Future<List<Edge>>> calcResult;
 
-    private KochRunnable leftEdge;
-    private KochRunnable rightEdge;
-    private KochRunnable bottomEdge;
+    private ExecutorService threadPool;
+    private CyclicBarrier barrier;
+    //private List<KochRunnable> kochRunnables;
 
     private TimeStamp tsCalc;
 
     public KochManager(JSF31KochFractalFX application) {
         this.application = application;
-        edges = new ArrayList(1000000);
+        this.calcResult = new ArrayList<>();
 
-        leftEdge = new KochRunnable(new KochFractal(), KochEdgeMode.Left, edges, this);
-        rightEdge = new KochRunnable(new KochFractal(), KochEdgeMode.Right, edges, this);
-        bottomEdge = new KochRunnable(new KochFractal(), KochEdgeMode.Bottom, edges, this);
+        //this.kochRunnables = new ArrayList<>();
+        this.threadPool = Executors.newFixedThreadPool(3);
+
+        this.barrier = new CyclicBarrier(3, () -> {
+            tsCalc.setEndBegin("End Calculating edges");
+            application.requestDrawEdges();
+        });
+
+        //for(KochEdgeMode mode : KochEdgeMode.values()) {
+            //kochRunnables.add(new KochRunnable(new KochFractal(), mode, edges, this));
+        //}
     }
 
     public void changeLevel(int nxt) {
-        edges.clear();
-        leftEdge.cancelCalculation();
-        rightEdge.cancelCalculation();
-        bottomEdge.cancelCalculation();
-        threadCount = 0;
+        calcResult.clear();
+        barrier.reset();
+        //kochRunnables.forEach(k -> k.cancelCalculation());
 
-        leftEdge.setLevel(nxt);
-        rightEdge.setLevel(nxt);
-        bottomEdge.setLevel(nxt);
+        for(KochEdgeMode mode : KochEdgeMode.values()) {
+            calcResult.add(threadPool.submit(new KochCallable(mode, this, nxt)));
+        }
 
-        Thread leftThread = new Thread(leftEdge);
-        Thread rightThread = new Thread(rightEdge);
-        Thread bottomThread = new Thread(bottomEdge);
+        //kochRunnables.forEach(k -> k.setLevel(nxt));
+
+        //kochRunnables.forEach(k -> threadPool.execute(k));
 
         tsCalc = new TimeStamp();
         tsCalc.setBegin("Start Calculating edges.");
 
         application.setTextCalc("Calculating...");
         application.setTextDraw("Calculating...");
-        leftThread.start();
-        rightThread.start();
-        bottomThread.start();
     }
 
     public void drawEdges() {
@@ -62,6 +64,15 @@ public class KochManager {
 
         TimeStamp ts = new TimeStamp();
 
+        List<Edge> edges = new ArrayList<>();
+        calcResult.forEach(c -> {
+            try {
+                edges.addAll(c.get());
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        });
+
         ts.setBegin("Start drawing fractals");
         edges.forEach(application::drawEdge);
         ts.setEnd("End drawing fractals");
@@ -70,15 +81,23 @@ public class KochManager {
         application.setTextDraw(ts.toString());
     }
 
-    public synchronized void increaseCount() {
-        threadCount++;
-        if(threadCount == 3) {
-            tsCalc.setEndBegin("End Calculating edges");
-            application.requestDrawEdges();
+    public void await() {
+        try {
+            barrier.await();
+        } catch (InterruptedException | BrokenBarrierException e) {
+            e.printStackTrace();
         }
     }
 
-    public synchronized void addEdge(Edge e) {
+    /*public synchronized void increaseCount() {
+        threadCount++;
+        if(threadCount == 3) {
+
+            application.requestDrawEdges();
+        }
+    }*/
+
+    /*public synchronized void addEdge(Edge e) {
         edges.add(e);
-    }
+    }*/
 }

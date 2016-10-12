@@ -1,4 +1,4 @@
-package calculate;
+/*package calculate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +7,7 @@ import java.util.Observer;
 
 /**
  * Created by Oscar on 28-Sep-16.
- */
+ *//*
 public class KochRunnable implements Runnable, Observer {
     private KochFractal koch;
     private KochEdgeMode mode;
@@ -43,7 +43,7 @@ public class KochRunnable implements Runnable, Observer {
      * take any action whatsoever.
      *
      * @see Thread#run()
-     */
+     *//*
     @Override
     public void run() {
         isCancelled = false;
@@ -72,9 +72,9 @@ public class KochRunnable implements Runnable, Observer {
      *
      * @param o   the observable object.
      * @param arg an argument passed to the <code>notifyObservers</code>
-     */
+     *//*
     @Override
     public void update(Observable o, Object arg) {
            manager.addEdge((Edge) arg);
     }
-}
+}*/
