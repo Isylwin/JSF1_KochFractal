@@ -1,7 +1,9 @@
 package calculate;
 
 import javafx.application.Platform;
+import javafx.scene.paint.Color;
 import jsf31kochfractalfx.JSF31KochFractalFX;
+import jsf31kochfractalfx.KochTask;
 import timeutil.TimeStamp;
 
 import java.util.*;
@@ -12,43 +14,49 @@ import java.util.concurrent.*;
  */
 public class KochManager {
     private JSF31KochFractalFX application;
-    private List<Future<List<Edge>>> calcResult;
+    //private List<Future<List<Edge>>> calcResult;
+    private List<KochTask> tasks;
 
     private ExecutorService threadPool;
-    private CyclicBarrier barrier;
-    //private List<KochRunnable> kochRunnables;
+    private int threadCounter;
+    //private CyclicBarrier barrier;
+
+    private List<Edge> edges;
 
     private TimeStamp tsCalc;
 
     public KochManager(JSF31KochFractalFX application) {
         this.application = application;
-        this.calcResult = new ArrayList<>();
+        this.edges = new ArrayList<>();
+        this.tasks = new ArrayList<>();
 
-        //this.kochRunnables = new ArrayList<>();
         this.threadPool = Executors.newFixedThreadPool(3);
 
-        this.barrier = new CyclicBarrier(3, () -> {
+        /*this.barrier = new CyclicBarrier(3, () -> {
             tsCalc.setEndBegin("End Calculating edges");
             application.requestDrawEdges();
-        });
+        });*/
 
-        //for(KochEdgeMode mode : KochEdgeMode.values()) {
-            //kochRunnables.add(new KochRunnable(new KochFractal(), mode, edges, this));
-        //}
     }
 
     public void changeLevel(int nxt) {
-        calcResult.clear();
-        barrier.reset();
+        //barrier.reset();
         //kochRunnables.forEach(k -> k.cancelCalculation());
+        tasks.forEach(KochTask::cancelTask);
+        tasks.clear();
+        edges.clear();
+        threadCounter = 0;
+        //application.clearKochPanel();
+
 
         for(KochEdgeMode mode : KochEdgeMode.values()) {
-            calcResult.add(threadPool.submit(new KochCallable(mode, this, nxt)));
+            //calcResult.add(threadPool.submit(new KochCallable(mode, this, nxt)));
+            KochTask task = new KochTask(this, mode, nxt);
+
+            tasks.add(task);
+            threadPool.execute(task);
+            application.bindProgressBar(mode, task);
         }
-
-        //kochRunnables.forEach(k -> k.setLevel(nxt));
-
-        //kochRunnables.forEach(k -> threadPool.execute(k));
 
         tsCalc = new TimeStamp();
         tsCalc.setBegin("Start Calculating edges.");
@@ -58,20 +66,12 @@ public class KochManager {
     }
 
     public void drawEdges() {
+        tsCalc.setEnd("End Calculating edges");
         application.setTextCalc(tsCalc.toString());
 
         application.clearKochPanel();
 
         TimeStamp ts = new TimeStamp();
-
-        List<Edge> edges = new ArrayList<>();
-        calcResult.forEach(c -> {
-            try {
-                edges.addAll(c.get());
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
-            }
-        });
 
         ts.setBegin("Start drawing fractals");
         edges.forEach(application::drawEdge);
@@ -82,22 +82,30 @@ public class KochManager {
     }
 
     public void await() {
-        try {
+        /*try {
             barrier.await();
         } catch (InterruptedException | BrokenBarrierException e) {
             e.printStackTrace();
+        }*/
+    }
+
+    public synchronized void finishedTask() {
+        if(++threadCounter == 3) {
+            application.requestDrawEdges();
         }
     }
 
-    /*public synchronized void increaseCount() {
-        threadCount++;
-        if(threadCount == 3) {
+    public synchronized void addEdge(Edge edge) {
+        edges.add(edge);
+        Platform.runLater(() ->
+                application.drawEdge(new Edge(edge.X1, edge.Y1, edge.X2, edge.Y2, Color.WHITE)));
+                //application.drawEdge(edge));
 
-            application.requestDrawEdges();
+        try {
+            Thread.sleep(0, 10);
+        } catch (InterruptedException e) {
+            Platform.runLater(() ->
+            application.clearKochPanel());
         }
-    }*/
-
-    /*public synchronized void addEdge(Edge e) {
-        edges.add(e);
-    }*/
+    }
 }
